@@ -5,7 +5,7 @@ const glMutex = new Mutex();
 let lockOwner = null;
 let unlockFn = null;
 
-const lockedResponse = 'locker';
+const lockedResponse = 'locked';
 const unlockedResponse = 'unlocked';
 
 const command = {
@@ -16,26 +16,34 @@ const command = {
             return lockedResponse;
         }),
     unlock: (senderId) => {
-        if (unlockFn !== null) {
+        if (unlockFn !== null && senderId === lockOwner) {
             unlockFn();
             unlockFn = null;
-            return 'unlocked';
+            return unlockedResponse;
         }
     }
 };
 
-async function execCommand(commandType) {
+async function execCommand({ type, senderId }) {
     try {
-        command[commandType]();
+        return await command[type](senderId);
     } catch (e) {
 
     }
 }
 
+function parseCommand(buffer) {
+    return JSON.parse(buffer.toString());
+}
+
 const server = net.createServer(connection => {
     console.log('new connection');
     connection.on('data', (data) => {
-        execCommand(data.toString()).then((result) => connection.write(result + '\n\r'));
+        execCommand(parseCommand(data)).then((result) => {
+            if (result) {
+                connection.write(result + '\n\r');
+            }
+        });
     });
     connection.on('end', () => { console.log('connection closed') })
 });
