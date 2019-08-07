@@ -8,18 +8,27 @@ let unlockFn = null;
 const lockedResponse = 'locked';
 const unlockedResponse = 'unlocked';
 
+async function lock(senderId) {
+    console.log('locking', senderId);
+    const unlock = await glMutex.lock();
+    console.log('locked', senderId);
+    return unlock;
+}
+
 const command = {
-    lock: (senderId) => glMutex.lock()
+    lock: (senderId) => lock(senderId)
         .then((unlock) => {
             lockOwner = senderId;
             unlockFn = unlock;
-            return lockedResponse;
+            return lockedResponse + ' ' + senderId;
         }),
     unlock: (senderId) => {
+        console.log('unlocking', senderId);
         if (unlockFn !== null && senderId === lockOwner) {
             unlockFn();
             unlockFn = null;
-            return unlockedResponse;
+            console.log('unlocked', senderId);
+            return unlockedResponse + ' ' + senderId;
         }
     }
 };
